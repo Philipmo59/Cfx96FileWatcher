@@ -11,7 +11,8 @@ class CFX96FileHandler(FileSystemEventHandler):
 
     def on_created(self, event: FileSystemEvent) -> None:
         '''TO DO: Place all files not related to the CFX96 to a dir called 'GeneralMisc' '''
-        date = datetime.datetime.now().date().strftime("%Y%m%d")
+        # date = datetime.datetime.now().date().strftime("%Y%m%d")
+        date = "20240407"
         file_created = pathlib.Path(event.src_path)
 
         if not len(file_created.name.split(" - ")) > 1:
@@ -66,11 +67,16 @@ class CFX96FileHandler(FileSystemEventHandler):
         file_name = file.name
         #.DS_Store is a temporary file with the same name as the original file created by MacOS to save changes to temporarily... I believe
         if file_name.find(".DS_Store") > -1: return None   
+        if file_name.find(".log") > -1: return None
         try:
-            file.rename(parent/file_name)
-            logger.info(f"Moved {file_name} to {target_dir.name}")
-        except Exception as e:
-            logger.error(f"File: {file_name} could not be moved to the correct directory here is the Python Error: ", e)
+            new_path = parent/file_name
+            if new_path.exists():
+                raise FileExistsError(f"The {file_name} already exists within this directory")
+            else:
+                file.rename(new_path)
+                logger.info(f"Moved {file_name} to {target_dir.name}")
+        except FileExistsError as e:
+            logger.error(f"File: {file_name} could not be moved to the correct directory: {e}")
 
     def __create_general_misc_dir(self)->pathlib.Path:
         general_misc_dir = pathlib.Path(self.watched_path, "GeneralMisc")
@@ -79,24 +85,20 @@ class CFX96FileHandler(FileSystemEventHandler):
         return general_misc_dir
 
 class CFX96Observer():
-    filepath = "."
 
-    def __init__(self)->None:
+    def __init__(self, path:str)->None:
+        self.path = path
         self.__observer__ = Observer()
-        self.__observer__.schedule(CFX96FileHandler(self.filepath), self.filepath, recursive=False)
+        self.__observer__.schedule(CFX96FileHandler(self.path), self.path, recursive=False)
 
     def watch(self)->None:
-        print("Started monitoring the CFX96 C1000 NAS filepath for exported runs")
+        print("\nStarted monitoring the CFX96 C1000 NAS filepath for exported runs")
+        print("Check log file record keeping and errors")
         self.__observer__.start()
         self.__observer__.run()
 
-
-
-def main()->None:
-    observer = CFX96Observer()
-    observer.watch()
-    
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
-    logging.basicConfig(filename = "CFX96_FileWatcherLog.txt", encoding="utf-8", filemode="a", datefmt="%Y%m%d %H:%M:%S", level=logging.INFO, format="%(asctime)s %(message)s")
-    main()
+    logging.basicConfig(filename = "CFX96_FileWatcherLog.log", encoding="utf-8", filemode="a", datefmt="%Y%m%d %H:%M:%S", level=logging.INFO, format="%(asctime)s %(message)s")    
+    observer = CFX96Observer(".")
+    observer.watch()
