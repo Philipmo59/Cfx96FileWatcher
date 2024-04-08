@@ -11,11 +11,10 @@ class CFX96FileHandler(FileSystemEventHandler):
 
     def on_created(self, event: FileSystemEvent) -> None:
         '''TO DO: Place all files not related to the CFX96 to a dir called 'GeneralMisc' '''
-        # date = datetime.datetime.now().date().strftime("%Y%m%d")
-        date = "20240407"
+        date = datetime.datetime.now().date().strftime("%Y%m%d")        
         file_created = pathlib.Path(event.src_path)
 
-        if not len(file_created.name.split(" - ")) > 1:
+        if not len(file_created.name.split("-")) > 1:
             general_misc_dir = self.__create_general_misc_dir()
             self.__move_to__(general_misc_dir, file_created)
             return None
@@ -24,9 +23,9 @@ class CFX96FileHandler(FileSystemEventHandler):
         run_dir = self.__create_run_dir__(file_created.name, daily_dir)
         misc_dir, results_dir = self.__create_inner_dirs__(run_dir)
         
-        if file_created.name.find("Quantification Cq Results_0") > -1:
+        if file_created.name.find("Quantification Cq") > -1:
             self.__move_to__(results_dir, file_created)
-        elif file_created.name.find("Quantification Amplification Results") > -1:
+        elif file_created.name.find("Quantification Amplification") > -1:
             self.__move_to__(results_dir, file_created)
         else:
             self.__move_to__(misc_dir, file_created)
@@ -43,7 +42,7 @@ class CFX96FileHandler(FileSystemEventHandler):
         '''Makes the run dir if it doesn't exist
             TO DO: Will be called for each file created and will check whether the run dir exists each time, make it check once
         '''
-        run_title = file_created.split(" - ")[0]
+        run_title = file_created.split("-")[0]
         run_dir = daily_dir/run_title        
         if run_dir.exists(): return run_dir
         run_dir.mkdir()
