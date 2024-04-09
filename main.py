@@ -3,6 +3,7 @@ from watchdog.observers import Observer
 import pathlib
 import datetime
 import logging
+import time
 
 class CFX96FileHandler(FileSystemEventHandler):
     def __init__(self, watched_path:str) -> None:
@@ -10,7 +11,9 @@ class CFX96FileHandler(FileSystemEventHandler):
         self.watched_path = watched_path
 
     def on_created(self, event: FileSystemEvent) -> None:
-        '''TO DO: Place all files not related to the CFX96 to a dir called 'GeneralMisc' '''
+        #On Windows there is no distinction between FileCreatedEvent and DirectoryCreatedEvent on Unix there is
+        if event.is_directory: return None
+
         date = datetime.datetime.now().date().strftime("%Y%m%d")        
         file_created = pathlib.Path(event.src_path)
 
@@ -72,10 +75,12 @@ class CFX96FileHandler(FileSystemEventHandler):
             if new_path.exists():
                 raise FileExistsError(f"The {file_name} already exists within this directory")
             else:
+                #On Windows there will be an attempt to move the file even if the file isn't finished being written to, wait a second before moving it
+                time.sleep(1)
                 file.rename(new_path)
                 logger.info(f"Moved {file_name} to {target_dir.name}")
         except FileExistsError as e:
-            logger.error(f"File: {file_name} could not be moved to the correct directory: {e}")
+            logger.error(f"Erroe: {file_name} could not be moved to the correct directory: {e}")
 
     def __create_general_misc_dir(self)->pathlib.Path:
         general_misc_dir = pathlib.Path(self.watched_path, "GeneralMisc")
@@ -98,6 +103,6 @@ class CFX96Observer():
 
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
-    logging.basicConfig(filename = "CFX96_FileWatcherLog.log", encoding="utf-8", filemode="a", datefmt="%Y%m%d %H:%M:%S", level=logging.INFO, format="%(asctime)s %(message)s")    
+    logging.basicConfig(filename = "CFX96_FileWatcher.log", encoding="utf-8", filemode="a", datefmt="%Y%m%d %H:%M:%S", level=logging.INFO, format="%(asctime)s %(message)s")    
     observer = CFX96Observer(".")
     observer.watch()
